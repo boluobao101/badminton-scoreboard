@@ -671,6 +671,22 @@ function clockText() {
   return h ? h + ':' + p(m) + ':' + p(sec) : p(m) + ':' + p(sec);
 }
 
+/* 计时器：按墙上时间的 150ms 刻度对齐刷新，不随点击/报分卡顿而停顿 */
+var clockTimer = 0;
+
+function refreshClock() {
+  var txt = clockText();
+  if (el.clock.textContent !== txt) el.clock.textContent = txt;
+}
+
+function tickClock() {
+  if (clockTimer) { clearTimeout(clockTimer); clockTimer = 0; }
+  refreshClock();
+  if (st.over) return;
+  var wait = 150 - (Date.now() % 150) + 6;
+  clockTimer = setTimeout(tickClock, wait < 60 ? wait + 150 : wait);
+}
+
 function buildPips() {
   var need = needWins();
   if (need === pipCount) { paintPips(); return; }
@@ -717,7 +733,7 @@ function render() {
   el.gsA.textContent = st.gamesWon.A;
   el.gsB.textContent = st.gamesWon.B;
   el.label.textContent = st.over ? '比赛结束' : '第 ' + st.gameNo + ' 局';
-  el.clock.textContent = clockText();
+  tickClock();
   buildPips();
 }
 
@@ -1109,11 +1125,13 @@ function chime(big) {
 function speak(txt) {
   if (!cfg.voice || !('speechSynthesis' in window)) return;
   try {
-    speechSynthesis.cancel();
+    var ss = window.speechSynthesis;
+    /* 只在真的有语音在队列里时才 cancel，避免每次报分都触发一次阻塞 */
+    if (ss.speaking || ss.pending) ss.cancel();
     var u = new SpeechSynthesisUtterance(txt);
     u.lang = 'zh-CN';
     u.rate = 1.05;
-    speechSynthesis.speak(u);
+    ss.speak(u);
   } catch (e) {}
 }
 
@@ -1369,17 +1387,14 @@ document.addEventListener('pointerdown', function once() {
 });
 
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'visible') { wakeLock = null; syncWake(); }
+  if (document.visibilityState === 'visible') { wakeLock = null; syncWake(); tickClock(); }
 });
-
-setInterval(function () {
-  if (!st.over) el.clock.textContent = clockText();
-}, 1000);
 
 /* ========== 启动 ========== */
 applyTheme(cfg.theme);
 $('#btnLock').classList.toggle('on', !!st.locked);
 render();
+tickClock();
 if (st.over || st.pending) showEnd();
 syncWake();
 
