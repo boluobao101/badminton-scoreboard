@@ -89,9 +89,15 @@
 
 ## 部署到 GitHub Pages
 
-仓库已附带 `.github/workflows/pages.yml`：推送到 `main` 后会自动构建并发布。
+本仓库用 GitHub Pages 的「分支部署」直接发布静态文件：
 
-如果首次运行提示 Pages 未启用，在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**，然后重新运行该 workflow 即可。发布后的地址形如 `https://<用户名>.github.io/badminton-scoreboard/`。
+- **Settings → Pages → Build and deployment → Source** 选择 **Deploy from a branch**
+- 分支 `main`、目录 `/ (root)`
+- 推送到 `main` 后一两分钟自动重新构建
+
+在线地址：<https://boluobao101.github.io/badminton-scoreboard/>
+
+想在自己的仓库里部署，把 `index.html` 放进仓库根目录，按上面的路径设置一次即可，不需要 Actions workflow。
 
 ## 技术说明
 
