@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070a09">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="羽毛球计分板">
+<title>羽毛球计分板</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23070a09'/><path d='M32 40 L23 17 L32 13 L41 17 Z' fill='%23e7b45f'/><circle cx='32' cy='43' r='7.5' fill='%23f6f8f6'/></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#070a09;
+  --panel:#080b09;
+  --pressed:#0c110e;
+  --card:#0e1411;
+  --sheet:#0d1310;
+  --ink:#f6f8f6;
+  --muted:rgba(246,248,246,.52);
+  --line:rgba(255,255,255,.09);
+  --net:rgba(255,255,255,.16);
+  --dot:rgba(255,255,255,.25);
+  --pip:rgba(255,255,255,.22);
+  --overlay:rgba(3,5,4,.88);
+  --toastbg:#121814;
+  --solid:#f6f8f6;
+  --on-solid:#0a0d0b;
+  --a:#e7b45f;
+  --b:#58c6bd;
+  --a-soft:rgba(231,180,95,.10);
+  --b-soft:rgba(88,198,189,.10);
+  --a-line:rgba(231,180,95,.45);
+  --b-line:rgba(88,198,189,.45);
+  --a-fill:rgba(231,180,95,.13);
+  --a-track:rgba(231,180,95,.35);
+  --sys:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+}
+/* 主题：夜场 */
+:root[data-theme="midnight"]{
+  --bg:#06080f;--panel:#080a14;--pressed:#0d1020;--card:#0c1020;--sheet:#0b0f1c;
+  --ink:#f2f4ff;--muted:rgba(226,232,255,.52);--line:rgba(255,255,255,.10);
+  --net:rgba(255,255,255,.18);--dot:rgba(255,255,255,.28);--pip:rgba(255,255,255,.24);
+  --overlay:rgba(2,3,10,.9);--toastbg:#101426;--solid:#f2f4ff;--on-solid:#070912;
+  --a:#ff6f9c;--b:#59a8ff;
+  --a-soft:rgba(255,111,156,.11);--b-soft:rgba(89,168,255,.11);
+  --a-line:rgba(255,111,156,.45);--b-line:rgba(89,168,255,.45);
+  --a-fill:rgba(255,111,156,.14);--a-track:rgba(255,111,156,.35);
+}
+/* 主题：碳黑 */
+:root[data-theme="carbon"]{
+  --bg:#050506;--panel:#08080a;--pressed:#0f0f12;--card:#101013;--sheet:#0d0d10;
+  --ink:#ffffff;--muted:rgba(255,255,255,.5);--line:rgba(255,255,255,.10);
+  --net:rgba(255,255,255,.2);--dot:rgba(255,255,255,.3);--pip:rgba(255,255,255,.26);
+  --overlay:rgba(0,0,0,.9);--toastbg:#141416;--solid:#ffffff;--on-solid:#0a0a0b;
+  --a:#d9f24a;--b:#ff5b57;
+  --a-soft:rgba(217,242,74,.10);--b-soft:rgba(255,91,87,.10);
+  --a-line:rgba(217,242,74,.45);--b-line:rgba(255,91,87,.45);
+  --a-fill:rgba(217,242,74,.14);--a-track:rgba(217,242,74,.30);
+}
+/* 主题：日光 */
+:root[data-theme="day"]{
+  --bg:#ece8dd;--panel:#f4f1e8;--pressed:#e2ddd0;--card:#fbf9f3;--sheet:#f7f4ec;
+  --ink:#171a18;--muted:rgba(23,26,24,.55);--line:rgba(23,26,24,.12);
+  --net:rgba(23,26,24,.18);--dot:rgba(23,26,24,.30);--pip:rgba(23,26,24,.25);
+  --overlay:rgba(32,29,24,.55);--toastbg:#1d1f1c;--solid:#171a18;--on-solid:#fbf9f3;
+  --a:#c2410c;--b:#0f766e;
+  --a-soft:rgba(194,65,12,.10);--b-soft:rgba(15,118,110,.10);
+  --a-line:rgba(194,65,12,.35);--b-line:rgba(15,118,110,.35);
+  --a-fill:rgba(194,65,12,.12);--a-track:rgba(194,65,12,.30);
+}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--sys);
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;
+  user-select:none;-webkit-user-select:none;
+  overflow:hidden;overscroll-behavior:none;
+  touch-action:manipulation;
+}
+button{font-family:inherit;color:inherit;-webkit-appearance:none;appearance:none;cursor:pointer;border:0;background:none;padding:0}
+input{font-family:inherit;-webkit-appearance:none;appearance:none}
+
+/* ===== 整体骨架 ===== */
+#board{
+  position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* ===== 顶栏 ===== */
+.topbar{
+  flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  padding:9px 13px 9px 15px;min-height:52px;
+  border-bottom:1px solid var(--line);
+}
+.meta{display:flex;align-items:center;gap:9px;flex:1 1 0;min-width:0;font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+.meta .game{color:var(--ink);font-weight:600;white-space:nowrap}
+.meta .dot{width:3px;height:3px;border-radius:50%;background:var(--dot);flex:0 0 auto}
+.meta .clock{font-variant-numeric:tabular-nums;white-space:nowrap}
+.gs{
+  flex:0 0 auto;display:flex;align-items:baseline;gap:7px;
+  padding:5px 11px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(255,255,255,.035);font-variant-numeric:tabular-nums;
+  transition:background .15s ease,border-color .15s ease;
+}
+.gs:active{background:rgba(255,255,255,.10)}
+.gs .lab{font-size:10.5px;color:var(--muted);letter-spacing:.14em}
+.gs b{font-size:15px;font-weight:700;letter-spacing:.02em}
+.gs i{font-style:normal;color:rgba(255,255,255,.35);font-size:12px;margin:0 1px}
+.tools{display:flex;gap:7px;flex:1 1 0;justify-content:flex-end}
+.icon{
+  width:38px;height:38px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;
+  border:1px solid var(--line);background:rgba(255,255,255,.045);
+  color:rgba(246,248,246,.82);transition:transform .12s ease,background .15s ease,border-color .15s ease,color .15s ease;
+}
+.icon:active{transform:scale(.92);background:rgba(255,255,255,.12)}
+.icon.on{color:var(--a);border-color:var(--a-line);background:var(--a-fill)}
+.icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ===== 计分区 ===== */
+.courts{flex:1 1 auto;display:flex;min-height:0;min-width:0;position:relative;background:var(--bg)}
+.panel{
+  position:relative;flex:1 1 0;min-width:0;min-height:0;
+  display:flex;flex-direction:column;
+  padding:13px 16px calc(11px + env(safe-area-inset-bottom) * .5);
+  container-type:size;
+  background:radial-gradient(145% 92% at 50% -12%, var(--tint) 0%, rgba(0,0,0,0) 62%), var(--panel);
+  border-top:2px solid transparent;
+  transition:border-color .18s ease,background-color .18s ease;
+}
+.panel[data-side="A"]{--accent:var(--a);--accent-line:var(--a-line);--tint:var(--a-soft)}
+.panel[data-side="B"]{--accent:var(--b);--accent-line:var(--b-line);--tint:var(--b-soft)}
+.panel.serving{border-top-color:var(--accent)}
+.panel.pressed{background-color:var(--pressed)}
+.courts::after{
+  content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;transform:translateX(-.5px);
+  background:repeating-linear-gradient(to bottom,var(--net) 0 11px,rgba(0,0,0,0) 11px 22px);
+  pointer-events:none;
+}
+
+.p-head{flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}
+.p-name{
+  display:block;max-width:100%;min-height:32px;font-size:18px;font-weight:650;letter-spacing:.02em;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;
+  padding:4px 0;border-bottom:1px solid transparent;
+}
+.p-name:active{border-bottom-color:var(--line)}
+.serve{
+  flex:0 0 auto;display:none;align-items:center;gap:6px;height:23px;padding:0 9px;border-radius:999px;
+  border:1px solid var(--accent-line);color:var(--accent);font-size:10.5px;letter-spacing:.1em;
+  background:rgba(255,255,255,.02);
+}
+.serve b{font-weight:600}
+.serve .court{opacity:.95}
+.panel.serving .serve{display:flex}
+
+.p-body{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0;overflow:hidden}
+.score{
+  font-size:min(64cqh,56cqw);line-height:.86;font-weight:800;letter-spacing:-.055em;
+  font-variant-numeric:tabular-nums;transform-origin:center;
+}
+@keyframes pop{0%{transform:scale(1)}30%{transform:scale(1.055)}100%{transform:scale(1)}}
+.score.pop{animation:pop .3s cubic-bezier(.2,.9,.3,1)}
+
+.p-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pips{display:flex;gap:7px;align-items:center;height:12px}
+.pip{width:9px;height:9px;border-radius:50%;border:1px solid var(--pip);transition:background .2s ease,border-color .2s ease}
+.pip.on{background:var(--accent);border-color:var(--accent)}
+.minus{
+  width:40px;height:40px;flex:0 0 auto;border-radius:50%;border:1px solid var(--line);
+  background:rgba(255,255,255,.04);color:rgba(246,248,246,.55);
+  display:grid;place-items:center;font-size:19px;font-weight:400;line-height:0;
+  transition:transform .12s ease,background .15s ease;
+}
+.minus:active{transform:scale(.9);background:rgba(255,255,255,.12)}
+
+/* ===== 竖屏 ===== */
+@media (orientation:portrait){
+  .courts{flex-direction:column}
+  .courts::after{
+    left:0;right:0;top:50%;bottom:auto;width:auto;height:1px;transform:translateY(-.5px);
+    background:repeating-linear-gradient(to right,var(--net) 0 11px,rgba(0,0,0,0) 11px 22px);
+  }
+  .panel{padding:12px 18px calc(10px + env(safe-area-inset-bottom) * .5)}
+}
+@media (max-width:379px){
+  .meta .clock{display:none}
+  .meta .dot{display:none}
+  .icon{width:36px;height:36px}
+  .p-name{font-size:15.5px}
+}
+
+/* 旧版浏览器没有容器查询时的兜底 */
+@supports not (container-type:size){
+  .score{font-size:min(58vh,46vw)}
+  @media (orientation:portrait){.score{font-size:min(26vh,50vw)}}
+}
+
+/* ===== 弹层 ===== */
+.modal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;background:var(--overlay)}
+.modal.open{display:flex}
+.card{
+  width:min(420px,100%);background:var(--card);border:1px solid rgba(255,255,255,.12);border-radius:18px;
+  padding:22px 20px 18px;text-align:center;
+  animation:rise .26s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes rise{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+.kicker{font-size:11px;letter-spacing:.18em;color:var(--muted);margin:0 0 10px}
+.card h2{font-size:26px;font-weight:750;letter-spacing:-.01em;margin:0 0 8px;line-height:1.25}
+.card .sub{font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.6}
+.card .sub b{color:var(--ink);font-weight:600}
+.btns{display:flex;gap:9px}
+.btns button{flex:1;height:46px;border-radius:12px;font-size:15px;font-weight:600;letter-spacing:.02em}
+.primary{background:var(--solid);color:var(--on-solid)}
+.primary:active{transform:scale(.975);opacity:.9}
+.ghost{border:1px solid rgba(255,255,255,.16);color:rgba(246,248,246,.8)}
+.ghost:active{background:rgba(255,255,255,.08)}
+.card .stack{display:flex;flex-direction:column;gap:9px}
+
+/* ===== 设置面板 ===== */
+.sheet{align-items:flex-end;padding:0;background:rgba(3,5,4,.72)}
+@media (orientation:landscape){.sheet{align-items:center;padding:16px}}
+.sheet-card{
+  width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;
+  background:var(--sheet);border:1px solid rgba(255,255,255,.1);
+  border-radius:20px 20px 0 0;padding:0 0 env(safe-area-inset-bottom);
+  animation:up .3s cubic-bezier(.2,.9,.3,1);
+}
+@media (orientation:landscape){.sheet-card{border-radius:18px;padding-bottom:0;max-height:86vh;max-width:760px}}
+@media (orientation:landscape){
+  .sheet-body{display:grid;grid-template-columns:1fr 1fr;column-gap:24px;align-content:start}
+  .group{padding:10px 0 8px}
+}
+@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+.sheet-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+.sheet-head h3{margin:0;font-size:16px;font-weight:650;letter-spacing:.02em}
+.x{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--muted);font-size:20px;line-height:0}
+.x:active{background:rgba(255,255,255,.08)}
+.sheet-body{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px 18px 6px;scrollbar-width:none}
+.sheet-body::-webkit-scrollbar{width:0;height:0}
+.group{padding:12px 0 6px;border-bottom:1px solid var(--line)}
+.group:last-child{border-bottom:0}
+.gt{font-size:11px;letter-spacing:.16em;color:var(--muted);margin:2px 0 8px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:50px}
+.row .lab{min-width:0;font-size:14px;font-weight:550}
+.row .lab small{display:block;font-size:11.5px;font-weight:400;color:var(--muted);margin-top:3px;line-height:1.4;letter-spacing:0}
+.seg{display:flex;gap:3px;padding:3px;border-radius:11px;background:rgba(255,255,255,.055);flex:0 0 auto}
+.seg button{min-width:46px;height:34px;padding:0 11px;border-radius:8px;font-size:13px;font-weight:550;color:var(--muted);white-space:nowrap;transition:background .15s ease,color .15s ease}
+.seg button.on{background:rgba(255,255,255,.14);color:var(--ink)}
+.seg button:active{background:rgba(255,255,255,.2)}
+.mini{
+  flex:0 0 auto;height:34px;padding:0 15px;border-radius:9px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);
+  font-size:13px;font-weight:550;color:rgba(246,248,246,.9);
+  transition:background .15s ease,transform .12s ease;
+}
+.mini:active{background:rgba(255,255,255,.14);transform:scale(.97)}
+.switch{width:46px;height:27px;flex:0 0 auto;border-radius:27px;background:rgba(255,255,255,.1);position:relative;transition:background .2s ease}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:rgba(255,255,255,.72);transition:transform .2s cubic-bezier(.2,.9,.3,1),background .2s ease}
+.switch.on{background:var(--a-track)}
+.switch.on::after{transform:translateX(19px);background:var(--a)}
+.field{padding:6px 0 10px}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;letter-spacing:.02em}
+.field input{
+  width:100%;height:44px;padding:0 13px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.045);
+  color:var(--ink);font-size:16px;outline:none;
+}
+.field input:focus{border-color:var(--a-line);background:rgba(255,255,255,.07)}
+.sheet-foot{flex:0 0 auto;display:flex;gap:9px;padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.sheet-foot button{height:48px;border-radius:12px;font-size:15px;font-weight:600}
+.sheet-foot .primary{flex:1.6}
+.sheet-foot .ghost{flex:1}
+
+/* ===== 提示条 ===== */
+.toast{
+  position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));
+  transform:translate(-50%,14px);opacity:0;pointer-events:none;z-index:80;
+  max-width:calc(100vw - 40px);padding:10px 16px;border-radius:11px;
+  background:var(--toastbg);border:1px solid rgba(255,255,255,.16);color:#f7f7f2;
+  font-size:13px;letter-spacing:.01em;text-align:center;line-height:1.4;
+  transition:opacity .2s ease,transform .2s ease;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ===== 局分详情 ===== */
+.games-card{width:min(400px,100%);text-align:left;padding:20px 18px 16px}
+.games-card h3{font-size:16px;margin:0 0 14px;font-weight:650}
+.games-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.gline{display:flex;align-items:center;justify-content:space-between;font-size:14px;padding:11px 13px;border-radius:10px;background:rgba(255,255,255,.045);font-variant-numeric:tabular-nums}
+.gline .w{font-weight:650}
+.gline .wl{color:var(--a);font-weight:650}
+.gline .wr{color:var(--b);font-weight:650}
+.gline .tag{font-size:10.5px;letter-spacing:.12em;color:var(--muted);margin-left:10px}
+.empty{font-size:13px;color:var(--muted);padding:10px 0 18px;text-align:center}
+
+/* ===== 局点 / 赛点 ===== */
+.p-id{flex:1 1 auto;min-width:0}
+.p-sub{height:24px;margin-top:4px;display:flex;align-items:center}
+.flag{display:none;align-items:center;height:22px;padding:0 9px;border-radius:999px;
+  font-size:10.5px;letter-spacing:.1em;font-weight:600;white-space:nowrap}
+.flag.on{display:inline-flex}
+.flag.gp{color:var(--accent);border:1px solid var(--accent-line)}
+.flag.mp{color:var(--on-solid);background:var(--accent);border:1px solid var(--accent)}
+
+/* ===== 主题选择 ===== */
+.themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:2px 0 10px}
+.theme{display:flex;flex-direction:column;gap:6px;min-width:0}
+.tsw{height:42px;border-radius:9px;border:1px solid var(--line);display:flex;align-items:flex-end;gap:4px;
+  padding:7px;transition:transform .12s ease,border-color .15s ease}
+.theme:active .tsw{transform:scale(.97)}
+.theme.on .tsw{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.tsw .d{width:12px;height:12px;border-radius:50%;display:block}
+.theme em{font-size:11px;font-style:normal;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.theme.on em{color:var(--ink);font-weight:600}
+
+/* ===== 局间倒计时 ===== */
+.rest{font-size:12.5px;color:var(--muted);margin:-8px 0 16px;min-height:18px;font-variant-numeric:tabular-nums}
+.rest b{color:var(--ink);font-weight:650;font-size:14px}
+.rest.done{color:var(--a)}
+
+/* ===== 历史战绩 ===== */
+.hrow{padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.045);font-size:13px}
+.hrow .l1{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.hrow .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hrow .nm .win{color:var(--a);font-size:11px;letter-spacing:.08em;margin-left:5px}
+.hrow .sc{font-variant-numeric:tabular-nums;color:var(--muted);flex:0 0 auto}
+.hrow .l2{margin-top:5px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.hrow .l2 + .l2{margin-top:3px}
+.games-card h3{display:flex;align-items:center;justify-content:space-between}
+
+/* ===== 日光主题：反色覆盖（白叠层在浅底上不可见） ===== */
+:root[data-theme="day"] .icon{background:rgba(23,26,24,.05);color:rgba(23,26,24,.78)}
+:root[data-theme="day"] .icon:active{background:rgba(23,26,24,.12)}
+:root[data-theme="day"] .gs{background:rgba(23,26,24,.05)}
+:root[data-theme="day"] .gs:active{background:rgba(23,26,24,.10)}
+:root[data-theme="day"] .gs i{color:rgba(23,26,24,.35)}
+:root[data-theme="day"] .minus{background:rgba(23,26,24,.05);color:rgba(23,26,24,.6)}
+:root[data-theme="day"] .minus:active{background:rgba(23,26,24,.12)}
+:root[data-theme="day"] .seg{background:rgba(23,26,24,.06)}
+:root[data-theme="day"] .seg button.on{background:rgba(23,26,24,.14);color:var(--ink)}
+:root[data-theme="day"] .seg button:active{background:rgba(23,26,24,.2)}
+:root[data-theme="day"] .mini{background:rgba(23,26,24,.06);border-color:rgba(23,26,24,.14);color:rgba(23,26,24,.86)}
+:root[data-theme="day"] .switch{background:rgba(23,26,24,.12)}
+:root[data-theme="day"] .switch::after{background:rgba(23,26,24,.62)}
+:root[data-theme="day"] .switch.on::after{background:var(--a)}
+:root[data-theme="day"] .field input{background:rgba(23,26,24,.04);border-color:rgba(23,26,24,.14)}
+:root[data-theme="day"] .field input:focus{background:rgba(23,26,24,.06)}
+:root[data-theme="day"] .card{border-color:rgba(23,26,24,.14)}
+:root[data-theme="day"] .sheet-card{border-color:rgba(23,26,24,.14)}
+:root[data-theme="day"] .ghost{color:rgba(23,26,24,.8);border-color:rgba(23,26,24,.18)}
+:root[data-theme="day"] .ghost:active{background:rgba(23,26,24,.08)}
+:root[data-theme="day"] .x:active{background:rgba(23,26,24,.08)}
+:root[data-theme="day"] .gline{background:rgba(23,26,24,.05)}
+:root[data-theme="day"] .hrow{background:rgba(23,26,24,.05)}
+:root[data-theme="day"] .sheet{background:rgba(32,29,24,.5)}
+</style>
+</head>
+<body>
+<div id="board">
+
+  <header class="topbar">
+    <div class="meta">
+      <span class="game" id="gameLabel">第 1 局</span>
+      <span class="dot"></span>
+      <span class="clock" id="clock">00:00</span>
+    </div>
+    <button class="gs" id="btnGames" aria-label="查看局分详情">
+      <span class="lab">局分</span>
+      <b id="gsA">0</b><i>:</i><b id="gsB">0</b>
+    </button>
+    <div class="tools">
+      <button class="icon" id="btnUndo" aria-label="撤销上一分" title="撤销">
+        <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12H9"/></svg>
+      </button>
+      <button class="icon" id="btnLock" aria-label="锁定计分" title="锁定">
+        <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+      </button>
+      <button class="icon" id="btnSet" aria-label="设置" title="设置">
+        <svg viewBox="0 0 24 24"><path d="M4 7h9M4 12h13M4 17h7"/><circle cx="17" cy="7" r="2.2"/><circle cx="9" cy="12" r="2.2"/><circle cx="15" cy="17" r="2.2"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="courts">
+    <section class="panel" id="panelA" data-side="A" role="button" tabindex="0" aria-label="A 方加一分">
+      <div class="p-head">
+        <div class="p-id">
+          <button class="p-name" id="nameA">A 队</button>
+          <div class="p-sub"><span class="flag" id="flagA"></span></div>
+        </div>
+        <span class="serve"><b>发球</b><span class="court">右区</span></span>
+      </div>
+      <div class="p-body"><span class="score" id="scoreA">0</span></div>
+      <div class="p-foot">
+        <div class="pips" id="pipsA"></div>
+        <button class="minus" id="minusA" aria-label="A 方减一分">−</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panelB" data-side="B" role="button" tabindex="0" aria-label="B 方加一分">
+      <div class="p-head">
+        <div class="p-id">
+          <button class="p-name" id="nameB">B 队</button>
+          <div class="p-sub"><span class="flag" id="flagB"></span></div>
+        </div>
+        <span class="serve"><b>发球</b><span class="court">右区</span></span>
+      </div>
+      <div class="p-body"><span class="score" id="scoreB">0</span></div>
+      <div class="p-foot">
+        <div class="pips" id="pipsB"></div>
+        <button class="minus" id="minusB" aria-label="B 方减一分">−</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== 局结束 / 比赛结束 ===== -->
+<div class="modal" id="mEnd" role="dialog" aria-modal="true">
+  <div class="card">
+    <p class="kicker" id="endKicker">第 1 局结束</p>
+    <h2 id="endTitle">A 队 21 : 19</h2>
+    <p class="sub" id="endSub"></p>
+    <p class="rest" id="endRest"></p>
+    <div class="btns" id="endBtns"></div>
+  </div>
+</div>
+
+<!-- ===== 局分明细 ===== -->
+<div class="modal" id="mGames" role="dialog" aria-modal="true">
+  <div class="card games-card">
+    <h3>本场局分明细</h3>
+    <div class="games-list" id="gamesList"></div>
+    <div class="btns"><button class="ghost" id="btnGamesClose">关闭</button></div>
+  </div>
+</div>
+
+<!-- ===== 改名字 ===== -->
+<div class="modal" id="mName" role="dialog" aria-modal="true">
+  <div class="card" style="text-align:left">
+    <p class="kicker" style="text-align:center">修改名称</p>
+    <div class="field"><label id="nameLabel">名称</label><input id="inName" maxlength="16" enterkeyhint="done"></div>
+    <div class="btns" style="margin-top:6px">
+      <button class="ghost" id="btnNameCancel">取消</button>
+      <button class="primary" id="btnNameOk">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 设置 ===== -->
+<div class="modal sheet" id="mSet" role="dialog" aria-modal="true">
+  <div class="sheet-card">
+    <div class="sheet-head">
+      <h3>设置</h3>
+      <button class="x" id="btnSetClose" aria-label="关闭">×</button>
+    </div>
+    <div class="sheet-body">
+
+      <div class="group">
+        <p class="gt">赛制</p>
+        <div class="row">
+          <div class="lab">项目</div>
+          <div class="seg" data-key="mode">
+            <button data-v="singles">单打</button>
+            <button data-v="doubles">双打</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lab">每局分数</div>
+          <div class="seg" data-key="target">
+            <button data-v="21">21</button>
+            <button data-v="15">15</button>
+            <button data-v="11">11</button>
+            <button data-v="7">7</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lab">局数</div>
+          <div class="seg" data-key="bestOf">
+            <button data-v="1">1 局</button>
+            <button data-v="3">3 局 2 胜</button>
+            <button data-v="5">5 局 3 胜</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lab">净胜 2 分<small>20 平后需领先 2 分，30 分封顶</small></div>
+          <button class="switch" data-key="winBy2" aria-label="净胜两分"></button>
+        </div>
+        <div class="row">
+          <div class="lab">自动换边<small>每局结束与决胜局 11 分时交换左右</small></div>
+          <button class="switch" data-key="autoSwap" aria-label="自动换边"></button>
+        </div>
+      </div>
+
+      <div class="group">
+        <p class="gt">主题</p>
+        <div class="themes" id="themes">
+          <button class="theme" data-theme="court" aria-label="球场绿主题">
+            <span class="tsw" style="background:#070a09"><i class="d" style="background:#e7b45f"></i><i class="d" style="background:#58c6bd"></i></span>
+            <em>球场绿</em>
+          </button>
+          <button class="theme" data-theme="midnight" aria-label="夜场主题">
+            <span class="tsw" style="background:#06080f"><i class="d" style="background:#ff6f9c"></i><i class="d" style="background:#59a8ff"></i></span>
+            <em>夜场</em>
+          </button>
+          <button class="theme" data-theme="carbon" aria-label="碳黑主题">
+            <span class="tsw" style="background:#050506"><i class="d" style="background:#d9f24a"></i><i class="d" style="background:#ff5b57"></i></span>
+            <em>碳黑</em>
+          </button>
+          <button class="theme" data-theme="day" aria-label="日光主题">
+            <span class="tsw" style="background:#ece8dd;border-color:rgba(23,26,24,.2)"><i class="d" style="background:#c2410c"></i><i class="d" style="background:#0f766e"></i></span>
+            <em>日光</em>
+          </button>
+        </div>
+      </div>
+
+      <div class="group">
+        <p class="gt">名称</p>
+        <div class="field"><label>A 方名称</label><input id="inNameA" maxlength="16" placeholder="A 队"></div>
+        <div class="field"><label>B 方名称</label><input id="inNameB" maxlength="16" placeholder="B 队"></div>
+      </div>
+
+      <div class="group">
+        <p class="gt">辅助</p>
+        <div class="row">
+          <div class="lab">得分音效</div>
+          <button class="switch" data-key="sound" aria-label="得分音效"></button>
+        </div>
+        <div class="row">
+          <div class="lab">语音报分<small>每次得分后朗读比分</small></div>
+          <button class="switch" data-key="voice" aria-label="语音报分"></button>
+        </div>
+        <div class="row">
+          <div class="lab">屏幕常亮<small>支持 Wake Lock 的设备有效</small></div>
+          <button class="switch" data-key="wake" aria-label="屏幕常亮"></button>
+        </div>
+        <div class="row">
+          <div class="lab">历史战绩<small>自动记录已结束的比赛</small></div>
+          <button class="mini" id="btnHist">查看</button>
+        </div>
+        <div class="row">
+          <div class="lab">全屏显示<small>隐藏浏览器地址栏，比赛更投入</small></div>
+          <button class="mini" id="btnFull">全屏</button>
+        </div>
+        <div class="row">
+          <div class="lab">左右显示<small>调整 A / B 在屏幕上的位置</small></div>
+          <button class="mini" id="btnFlip">交换</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="row">
+          <div class="lab">重置本场<small>清空比分与局分，名称保留</small></div>
+          <button class="mini" id="btnReset">重置</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="sheet-foot">
+      <button class="ghost" id="btnSetCancel">取消</button>
+      <button class="primary" id="btnSetSave">保存并应用</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 历史战绩 ===== -->
+<div class="modal" id="mHist" role="dialog" aria-modal="true">
+  <div class="card games-card">
+    <h3>历史战绩</h3>
+    <div class="games-list" id="histList"></div>
+    <div class="btns">
+      <button class="ghost" id="btnHistClear">清空</button>
+      <button class="ghost" id="btnHistClose">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ========== 常量与工具 ========== */
+(function () {
+'use strict';
+
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var otherOf = function (s) { return s === 'A' ? 'B' : 'A'; };
+
+/* 各赛制的封顶分 */
+var CAPS = { 21: 30, 15: 21, 11: 15, 7: 11 };
+var DEF = {
+  mode: 'singles', target: 21, bestOf: 3, winBy2: true, autoSwap: true,
+  sound: true, voice: false, wake: true, theme: 'court', nameA: 'A 队', nameB: 'B 队'
+};
+
+var cfg = Object.assign({}, DEF, read('bmt.cfg', {}) || {});
+var st = Object.assign(fresh(), read('bmt.st', {}) || {});
+var undoStack = [];
+var ac = null;
+var wakeLock = null;
+var toastTimer = null;
+var nameSide = 'A';
+var pipCount = -1;
+
+function read(k, fb) {
+  try { var s = localStorage.getItem(k); return s ? JSON.parse(s) : fb; } catch (e) { return fb; }
+}
+function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function save() { store('bmt.cfg', cfg); store('bmt.st', st); }
+
+function fresh() {
+  var now = Date.now();
+  return {
+    score: { A: 0, B: 0 }, gamesWon: { A: 0, B: 0 }, games: [],
+    server: 'A', leftA: true, gameNo: 1,
+    over: false, pending: false, winner: null, intervalDone: false,
+    startAt: now, endAt: 0, gameStartAt: now,
+    locked: false, log: []
+  };
+}
+
+function needWins() { return Math.ceil(cfg.bestOf / 2); }
+
+/* ========== DOM ========== */
+var el = {
+  panelA: $('#panelA'), panelB: $('#panelB'),
+  scoreA: $('#scoreA'), scoreB: $('#scoreB'),
+  nameA: $('#nameA'), nameB: $('#nameB'),
+  flagA: $('#flagA'), flagB: $('#flagB'),
+  pipsA: $('#pipsA'), pipsB: $('#pipsB'),
+  label: $('#gameLabel'), clock: $('#clock'),
+  gsA: $('#gsA'), gsB: $('#gsB')
+};
+
+function open(sel) { $(sel).classList.add('open'); }
+function close(sel) { $(sel).classList.remove('open'); }
+function closeAll() {
+  $$('.modal.open').forEach(function (m) {
+    if (m.id === 'mSet') { cancelSettings(); return; }
+    m.classList.remove('open');
+  });
+  clearRest();
+}
+
+function dismissModals() {
+  $$('.modal.open').forEach(function (m) {
+    if (m.id === 'mEnd') return;
+    if (m.id === 'mSet') { cancelSettings(); return; }
+    m.classList.remove('open');
+  });
+}
+
+function toast(msg) {
+  var t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1700);
+}
+
+/* ========== 渲染 ========== */
+function clockText() {
+  var s = Math.max(0, Math.floor(((st.endAt || Date.now()) - st.startAt) / 1000));
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  var p = function (n) { return n < 10 ? '0' + n : String(n); };
+  return h ? h + ':' + p(m) + ':' + p(sec) : p(m) + ':' + p(sec);
+}
+
+function buildPips() {
+  var need = needWins();
+  if (need === pipCount) { paintPips(); return; }
+  pipCount = need;
+  ['A', 'B'].forEach(function (side) {
+    var box = side === 'A' ? el.pipsA : el.pipsB;
+    box.innerHTML = '';
+    for (var i = 0; i < need; i++) {
+      var d = document.createElement('span');
+      d.className = 'pip';
+      box.appendChild(d);
+    }
+  });
+  paintPips();
+}
+
+function paintPips() {
+  ['A', 'B'].forEach(function (side) {
+    var box = side === 'A' ? el.pipsA : el.pipsB;
+    Array.prototype.forEach.call(box.children, function (d, i) {
+      d.classList.toggle('on', i < st.gamesWon[side]);
+    });
+  });
+}
+
+function render() {
+  el.panelA.style.order = st.leftA ? '0' : '1';
+  el.panelB.style.order = st.leftA ? '1' : '0';
+
+  ['A', 'B'].forEach(function (side) {
+    var p = side === 'A' ? el.panelA : el.panelB;
+    var sc = side === 'A' ? el.scoreA : el.scoreB;
+    var nm = side === 'A' ? el.nameA : el.nameB;
+    var v = String(st.score[side]);
+    if (sc.textContent !== v) sc.textContent = v;
+    nm.textContent = side === 'A' ? cfg.nameA : cfg.nameB;
+    p.classList.toggle('serving', !st.over && !st.pending && st.server === side);
+    paintFlag(side, side === 'A' ? el.flagA : el.flagB);
+  });
+
+  var courtLabel = (st.score[st.server] % 2 === 0) ? '右区' : '左区';
+  $$('.serve .court').forEach(function (c) { c.textContent = courtLabel; });
+
+  el.gsA.textContent = st.gamesWon.A;
+  el.gsB.textContent = st.gamesWon.B;
+  el.label.textContent = st.over ? '比赛结束' : '第 ' + st.gameNo + ' 局';
+  el.clock.textContent = clockText();
+  buildPips();
+}
+
+function popScore(side) {
+  var sc = side === 'A' ? el.scoreA : el.scoreB;
+  sc.classList.remove('pop');
+  void sc.offsetWidth;
+  sc.classList.add('pop');
+}
+
+/* 局点 / 赛点 */
+function pointFlag(side) {
+  if (st.over || st.pending) return '';
+  var s = st.score[side], o = st.score[otherOf(side)], ns = s + 1;
+  var cap = CAPS[cfg.target] || (cfg.target + 9);
+  var wins = cfg.winBy2 ? (ns >= cap || (ns >= cfg.target && (ns - o) >= 2)) : ns >= cfg.target;
+  if (!wins) return '';
+  return (st.gamesWon[side] + 1 >= needWins()) ? '赛点' : '局点';
+}
+
+function paintFlag(side, node) {
+  if (!node) return;
+  var t = pointFlag(side);
+  if (!t) {
+    node.className = 'flag';
+    node.textContent = '';
+    return;
+  }
+  node.textContent = t;
+  node.className = 'flag on ' + (t === '赛点' ? 'mp' : 'gp');
+}
+
+/* ========== 规则引擎 ========== */
+function gameWinCheck(side) {
+  var s = st.score[side], o = st.score[otherOf(side)];
+  var cap = CAPS[cfg.target] || (cfg.target + 9);
+  if (cfg.winBy2) {
+    if (s >= cap) return true;
+    return s >= cfg.target && (s - o) >= 2;
+  }
+  return s >= cfg.target;
+}
+
+function pushUndo() {
+  undoStack.push(JSON.stringify(st));
+  if (undoStack.length > 80) undoStack.shift();
+}
+
+function addPoint(side) {
+  if (st.over) { toast('本场已结束，点「再来一场」重新开始'); return; }
+  if (st.pending) { toast('第 ' + st.gameNo + ' 局已结束，点「开始下一局」或撤销'); return; }
+  if (st.locked) { toast('计分已锁定，点右上角锁图标解锁'); return; }
+
+  pushUndo();
+  st.score[side] = Math.min(st.score[side] + 1, 99);
+  st.log.push(side);
+  st.server = side;
+
+  render();
+  popScore(side);
+  beep(side === 'A' ? 880 : 640, 0.055, 0.09);
+  speak(st.score.A + ' 比 ' + st.score.B);
+
+  if (gameWinCheck(side)) { endGame(side); return; }
+  checkInterval();
+  save();
+}
+
+function checkInterval() {
+  var mark = Math.ceil(cfg.target / 2);
+  if (st.intervalDone) return;
+  if (st.score.A !== mark && st.score.B !== mark) { save(); return; }
+
+  st.intervalDone = true;
+  if (st.gameNo === cfg.bestOf && cfg.autoSwap) {
+    st.leftA = !st.leftA;
+    render();
+    toast('决胜局 ' + mark + ' 分：交换场地 · 技术暂停');
+    speak('交换场地');
+  } else if (st.gameNo === cfg.bestOf) {
+    toast('决胜局 ' + mark + ' 分：技术暂停');
+  } else {
+    toast('技术暂停 ' + st.score.A + ' : ' + st.score.B);
+  }
+  chime(false);
+  save();
+}
+
+function endGame(side) {
+  st.games.push({ a: st.score.A, b: st.score.B, w: side });
+  st.gamesWon[side] += 1;
+
+  if (st.gamesWon[side] >= needWins()) {
+    st.over = true;
+    st.winner = side;
+    st.endAt = Date.now();
+    chime(true);
+    speak('比赛结束，' + (side === 'A' ? cfg.nameA : cfg.nameB) + '获胜');
+  } else {
+    st.pending = true;
+    chime(true);
+    speak('第' + st.gameNo + '局结束');
+  }
+  if (st.over) saveHistory();
+  render();
+  showEnd();
+  save();
+}
+
+function showEnd() {
+  var nameOf = function (s) { return s === 'A' ? cfg.nameA : cfg.nameB; };
+  var g = st.games[st.games.length - 1];
+  var isMatch = st.over;
+  var hi = Math.max(g.a, g.b), lo = Math.min(g.a, g.b);
+
+  $('#endKicker').textContent = isMatch ? '比赛结束' : '第 ' + st.gameNo + ' 局结束';
+  $('#endTitle').textContent = isMatch
+    ? nameOf(st.winner) + ' 获胜'
+    : nameOf(g.w) + ' ' + hi + ' : ' + lo;
+
+  if (isMatch) {
+    var detail = st.games.map(function (x) { return x.w === 'A' ? x.a + '-' + x.b : x.b + '-' + x.a; }).join('　');
+    $('#endSub').textContent = '局分 ' + st.gamesWon.A + ' : ' + st.gamesWon.B + '　' + detail;
+  } else {
+    $('#endSub').textContent = '局分 ' + st.gamesWon.A + ' : ' + st.gamesWon.B + '　' + '第 ' + (st.gameNo + 1) + ' 局由 ' + nameOf(g.w) + ' 先发球';
+  }
+
+  if (isMatch) {
+    clearRest();
+    $('#endRest').style.display = 'none';
+    $('#endRest').textContent = '';
+  } else {
+    startRest(60);
+  }
+
+  var box = $('#endBtns');
+  box.innerHTML = '';
+  if (isMatch) {
+    var b1 = mkBtn('ghost', '复制比分');
+    b1.onclick = copyScore;
+    var b2 = mkBtn('primary', '再来一场');
+    b2.onclick = function () { resetMatch(); };
+    box.appendChild(b1);
+    box.appendChild(b2);
+  } else {
+    var b3 = mkBtn('primary', '开始第 ' + (st.gameNo + 1) + ' 局');
+    b3.onclick = function () { nextGame(g.w); };
+    box.appendChild(b3);
+  }
+  open('#mEnd');
+}
+
+/* ========== 局间倒计时 ========== */
+var restTimer = null, restLeft = 0;
+
+function clearRest() {
+  if (restTimer) { clearInterval(restTimer); restTimer = null; }
+}
+
+function paintRest() {
+  var box = $('#endRest');
+  if (restLeft <= 0) {
+    box.textContent = '休息结束，可以开球了';
+    box.classList.add('done');
+  } else {
+    box.innerHTML = '局间休息 <b>' + restLeft + '</b> 秒';
+    box.classList.remove('done');
+  }
+}
+
+function startRest(sec) {
+  clearRest();
+  var box = $('#endRest');
+  box.style.display = 'block';
+  restLeft = sec;
+  paintRest();
+  restTimer = setInterval(function () {
+    restLeft = Math.max(0, restLeft - 1);
+    paintRest();
+    if (restLeft <= 0) clearRest();
+  }, 1000);
+}
+
+/* ========== 历史战绩 ========== */
+function saveHistory() {
+  var list = read('bmt.hist', []) || [];
+  if (!Array.isArray(list)) list = [];
+  if (list.length && list[0] && list[0].sid === st.startAt) return;
+  list.unshift({
+    sid: st.startAt, t: st.endAt || Date.now(),
+    a: cfg.nameA, b: cfg.nameB, w: st.winner,
+    gw: [st.gamesWon.A, st.gamesWon.B],
+    g: st.games.map(function (x) { return [x.a, x.b, x.w]; }),
+    dur: Math.max(0, Math.floor(((st.endAt || Date.now()) - st.startAt) / 1000))
+  });
+  if (list.length > 30) list.length = 30;
+  store('bmt.hist', list);
+}
+
+function fmtDate(ts) {
+  var d = new Date(ts);
+  var p = function (n) { return n < 10 ? '0' + n : String(n); };
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function fmtDur(s) {
+  var m = Math.floor(s / 60), sec = s % 60;
+  return m ? m + ' 分 ' + sec + ' 秒' : sec + ' 秒';
+}
+
+function openHistory() {
+  var list = read('bmt.hist', []) || [];
+  var box = $('#histList');
+  box.innerHTML = '';
+  if (!Array.isArray(list) || !list.length) {
+    var emp = document.createElement('div');
+    emp.className = 'empty';
+    emp.textContent = '还没有比赛记录';
+    box.appendChild(emp);
+  } else {
+    list.forEach(function (h) {
+      var row = document.createElement('div');
+      row.className = 'hrow';
+
+      var l1 = document.createElement('div');
+      l1.className = 'l1';
+      var nm = document.createElement('div');
+      nm.className = 'nm';
+      nm.textContent = (h.w === 'A' ? h.a : h.b);
+      var win = document.createElement('span');
+      win.className = 'win';
+      win.textContent = '胜';
+      nm.appendChild(win);
+      var sc = document.createElement('div');
+      sc.className = 'sc';
+      sc.textContent = h.gw[0] + ' : ' + h.gw[1];
+      l1.appendChild(nm);
+      l1.appendChild(sc);
+
+      var l2 = document.createElement('div');
+      l2.className = 'l2';
+      var vs = document.createElement('span');
+      vs.textContent = h.a + ' vs ' + h.b;
+      var when = document.createElement('span');
+      when.textContent = fmtDate(h.t);
+      l2.appendChild(vs);
+      l2.appendChild(when);
+
+      var l3 = document.createElement('div');
+      l3.className = 'l2';
+      var gs = document.createElement('span');
+      gs.textContent = (h.g || []).map(function (x) { return x[0] + '-' + x[1]; }).join(' / ');
+      var du = document.createElement('span');
+      du.textContent = '用时 ' + fmtDur(h.dur || 0);
+      l3.appendChild(gs);
+      l3.appendChild(du);
+
+      row.appendChild(l1);
+      row.appendChild(l2);
+      row.appendChild(l3);
+      box.appendChild(row);
+    });
+  }
+  open('#mHist');
+}
+
+function mkBtn(cls, txt) {
+  var b = document.createElement('button');
+  b.className = cls;
+  b.textContent = txt;
+  return b;
+}
+
+function nextGame(winnerSide) {
+  close('#mEnd');
+  clearRest();
+  st.gameNo += 1;
+  st.score = { A: 0, B: 0 };
+  st.log = [];
+  st.server = winnerSide;
+  st.pending = false;
+  st.intervalDone = false;
+  st.gameStartAt = Date.now();
+  if (cfg.autoSwap) st.leftA = !st.leftA;
+  render();
+  save();
+  toast('第 ' + st.gameNo + ' 局开始');
+}
+
+function resetMatch() {
+  st = fresh();
+  undoStack = [];
+  closeAll();
+  render();
+  save();
+  toast('已重置，开始新的一场');
+}
+
+function minusPoint(side) {
+  if (st.over) { toast('本场已结束'); return; }
+  if (st.pending) { toast('该局已结束，可先撤销再改分'); return; }
+  if (st.locked) { toast('计分已锁定'); return; }
+  if (st.score[side] <= 0) { toast('该方比分已经是 0'); return; }
+
+  pushUndo();
+  var i = st.log.lastIndexOf(side);
+  if (i >= 0) st.log.splice(i, 1);
+  st.score[side] -= 1;
+  var prevWinner = st.games.length ? st.games[st.games.length - 1].w : 'A';
+  st.server = st.log.length ? st.log[st.log.length - 1] : prevWinner;
+  st.intervalDone = false;
+  render();
+  save();
+  toast('已减去 1 分');
+}
+
+function undo() {
+  if (!undoStack.length) { toast('没有可撤销的操作'); return; }
+  st = JSON.parse(undoStack.pop());
+  closeAll();
+  render();
+  save();
+  toast('已撤销');
+}
+
+function toggleLock() {
+  st.locked = !st.locked;
+  $('#btnLock').classList.toggle('on', st.locked);
+  render();
+  save();
+  toast(st.locked ? '计分已锁定' : '已解锁');
+}
+
+function copyScore() {
+  var nameOf = function (s) { return s === 'A' ? cfg.nameA : cfg.nameB; };
+  var lines = st.games.map(function (g, i) {
+    var winner = nameOf(g.w);
+    return '第' + (i + 1) + '局 ' + g.a + '-' + g.b + '（' + winner + '）';
+  });
+  var txt = nameOf(st.winner) + ' 获胜　局分 ' + st.gamesWon.A + ':' + st.gamesWon.B +
+    '\n' + lines.join('\n') + '\n用时 ' + clockText();
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(function () { toast('比分已复制'); }, function () { fallbackCopy(txt); });
+  } else {
+    fallbackCopy(txt);
+  }
+}
+
+function fallbackCopy(txt) {
+  var ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+  toast(ok ? '比分已复制' : '复制失败，请手动记录');
+}
+
+/* ========== 声音 / 语音 / 常亮 ========== */
+function beep(freq, dur, vol) {
+  if (!cfg.sound) return;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    var o = ac.createOscillator(), g = ac.createGain();
+    var now = ac.currentTime;
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.1, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + (dur || 0.06));
+    o.connect(g);
+    g.connect(ac.destination);
+    o.start(now);
+    o.stop(now + (dur || 0.06) + 0.02);
+  } catch (e) {}
+}
+
+function chime(big) {
+  if (!cfg.sound) return;
+  beep(620, 0.07, 0.1);
+  setTimeout(function () { beep(880, 0.08, 0.1); }, 95);
+  if (big) setTimeout(function () { beep(1180, 0.13, 0.09); }, 200);
+}
+
+function speak(txt) {
+  if (!cfg.voice || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(txt);
+    u.lang = 'zh-CN';
+    u.rate = 1.05;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function syncWake() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    if (cfg.wake && !wakeLock && document.visibilityState === 'visible') {
+      navigator.wakeLock.request('screen').then(function (l) {
+        wakeLock = l;
+        l.addEventListener('release', function () { wakeLock = null; });
+      }, function () {});
+    } else if (!cfg.wake && wakeLock) {
+      wakeLock.release();
+      wakeLock = null;
+    }
+  } catch (e) {}
+}
+
+/* ========== 交互 ========== */
+function bindPanel(side) {
+  var p = side === 'A' ? el.panelA : el.panelB;
+
+  p.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('button')) return;
+    e.preventDefault();
+    p.classList.add('pressed');
+    addPoint(side);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+    p.addEventListener(ev, function () { p.classList.remove('pressed'); });
+  });
+  p.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  p.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addPoint(side); }
+  });
+}
+bindPanel('A');
+bindPanel('B');
+
+el.nameA.onclick = function () { openName('A'); };
+el.nameB.onclick = function () { openName('B'); };
+el.nameA.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+el.nameB.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+
+$('#minusA').onclick = function () { minusPoint('A'); };
+$('#minusB').onclick = function () { minusPoint('B'); };
+$('#btnUndo').onclick = undo;
+$('#btnLock').onclick = toggleLock;
+$('#btnSet').onclick = openSettings;
+$('#btnSetClose').onclick = function () { cancelSettings(); };
+$('#btnSetCancel').onclick = function () { cancelSettings(); };
+
+$('#btnHist').onclick = openHistory;
+$('#btnHistClose').onclick = function () { close('#mHist'); };
+$('#btnHistClear').onclick = function () {
+  if (!window.confirm('清空全部历史战绩？此操作不可撤销。')) return;
+  store('bmt.hist', []);
+  openHistory();
+};
+
+$('#btnFull').onclick = function () {
+  var d = document.documentElement;
+  var fn = d.requestFullscreen || d.webkitRequestFullscreen;
+  close('#mSet');
+  if (!fn) { toast('该浏览器不支持全屏，可「添加到主屏幕」后全屏使用'); return; }
+  try {
+    var r = fn.call(d);
+    if (r && r.then) {
+      r.then(function () { toast('已进入全屏'); }, function () { toast('全屏被系统拦截'); });
+    } else {
+      toast('已进入全屏');
+    }
+  } catch (e) { toast('该浏览器不支持全屏'); }
+};
+
+$('#btnGames').onclick = function () {
+  var box = $('#gamesList');
+  box.innerHTML = '';
+  if (!st.games.length) {
+    var emp = document.createElement('div');
+    emp.className = 'empty';
+    emp.textContent = '还没有已结束的局';
+    box.appendChild(emp);
+  } else {
+    st.games.forEach(function (g, i) {
+      var row = document.createElement('div');
+      row.className = 'gline';
+      var l = document.createElement('span');
+      l.textContent = '第 ' + (i + 1) + ' 局';
+      var m = document.createElement('span');
+      m.textContent = g.a + ' : ' + g.b;
+      m.style.fontWeight = '650';
+      var t = document.createElement('span');
+      t.className = 'tag';
+      t.textContent = (g.w === 'A' ? cfg.nameA : cfg.nameB) + ' 胜';
+      row.appendChild(l);
+      row.appendChild(m);
+      row.appendChild(t);
+      box.appendChild(row);
+    });
+  }
+  open('#mGames');
+};
+$('#btnGamesClose').onclick = function () { close('#mGames'); };
+
+/* ========== 名称编辑 ========== */
+function openName(side) {
+  nameSide = side;
+  $('#nameLabel').textContent = (side === 'A' ? 'A 方' : 'B 方') + '名称';
+  $('#inName').value = side === 'A' ? cfg.nameA : cfg.nameB;
+  open('#mName');
+  setTimeout(function () {
+    var i = $('#inName');
+    try { i.focus(); i.setSelectionRange(0, i.value.length); } catch (e) {}
+  }, 80);
+}
+
+$('#btnNameCancel').onclick = function () { close('#mName'); };
+$('#btnNameOk').onclick = function () {
+  var v = ($('#inName').value || '').trim().slice(0, 16);
+  if (!v) { toast('名称不能为空'); return; }
+  if (nameSide === 'A') cfg.nameA = v; else cfg.nameB = v;
+  save();
+  close('#mName');
+  render();
+};
+$('#inName').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') { e.preventDefault(); $('#btnNameOk').click(); }
+});
+
+/* ========== 主题 ========== */
+var THEME_BG = { court: '#070a09', midnight: '#06080f', carbon: '#050506', day: '#ece8dd' };
+var pickedTheme = cfg.theme;
+
+function applyTheme(t) {
+  var key = THEME_BG[t] ? t : 'court';
+  document.documentElement.setAttribute('data-theme', key);
+  var m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', THEME_BG[key]);
+  $$('.theme').forEach(function (b) { b.classList.toggle('on', b.dataset.theme === key); });
+}
+
+$$('.theme').forEach(function (b) {
+  b.addEventListener('click', function () {
+    pickedTheme = b.dataset.theme;
+    applyTheme(pickedTheme);
+  });
+});
+
+function cancelSettings() {
+  pickedTheme = cfg.theme;
+  applyTheme(cfg.theme);
+  close('#mSet');
+}
+
+/* ========== 设置 ========== */
+function openSettings() {
+  pickedTheme = cfg.theme;
+  applyTheme(pickedTheme);
+  $$('.seg[data-key]').forEach(function (seg) {
+    $$('button', seg).forEach(function (b) {
+      b.classList.toggle('on', String(cfg[seg.dataset.key]) === b.dataset.v);
+    });
+  });
+  $$('.switch[data-key]').forEach(function (sw) {
+    sw.classList.toggle('on', !!cfg[sw.dataset.key]);
+  });
+  $('#inNameA').value = cfg.nameA;
+  $('#inNameB').value = cfg.nameB;
+  open('#mSet');
+}
+
+$$('.seg[data-key]').forEach(function (seg) {
+  seg.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    $$('button', seg).forEach(function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+  });
+});
+
+$$('.switch[data-key]').forEach(function (sw) {
+  sw.addEventListener('click', function () { sw.classList.toggle('on'); });
+});
+
+$('#btnSetSave').onclick = function () {
+  var next = Object.assign({}, cfg);
+  $$('.seg[data-key]').forEach(function (seg) {
+    var on = seg.querySelector('button.on');
+    if (!on) return;
+    next[seg.dataset.key] = seg.dataset.key === 'mode' ? on.dataset.v : Number(on.dataset.v);
+  });
+  $$('.switch[data-key]').forEach(function (sw) {
+    next[sw.dataset.key] = sw.classList.contains('on');
+  });
+  next.nameA = ($('#inNameA').value || '').trim().slice(0, 16) || 'A 队';
+  next.nameB = ($('#inNameB').value || '').trim().slice(0, 16) || 'B 队';
+  next.theme = THEME_BG[pickedTheme] ? pickedTheme : 'court';
+
+  var changed = next.mode !== cfg.mode || next.target !== cfg.target ||
+    next.bestOf !== cfg.bestOf || next.winBy2 !== cfg.winBy2;
+  var progress = st.games.length > 0 || st.score.A > 0 || st.score.B > 0;
+
+  if (changed && progress && !window.confirm('修改赛制会重置当前比分，继续吗？')) return;
+
+  cfg = next;
+  save();
+  applyTheme(cfg.theme);
+  close('#mSet');
+  if (changed) { resetMatch(); } else { render(); }
+  syncWake();
+  if (!changed) toast('设置已保存');
+};
+
+$('#btnFlip').onclick = function () {
+  st.leftA = !st.leftA;
+  render();
+  save();
+  toast('已交换左右显示');
+};
+
+$('#btnReset').onclick = function () {
+  if (!window.confirm('确定重置本场比分吗？此操作不可撤销。')) return;
+  resetMatch();
+  close('#mSet');
+};
+
+/* ========== 关闭弹层 / 键盘 ========== */
+$$('.modal').forEach(function (m) {
+  m.addEventListener('click', function (e) {
+    if (e.target !== m) return;
+    if (m.id === 'mEnd') return;
+    if (m.id === 'mSet') { cancelSettings(); return; }
+    m.classList.remove('open');
+  });
+});
+
+document.addEventListener('keydown', function (e) {
+  if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+  var k = e.key.toLowerCase();
+  if (k === 'a' || k === '1') addPoint('A');
+  else if (k === 'b' || k === '2') addPoint('B');
+  else if (k === 'u' || (e.ctrlKey && k === 'z')) undo();
+  else if (k === 'l') toggleLock();
+  else if (k === 's') openSettings();
+  else if (e.key === 'Escape') dismissModals();
+});
+
+document.addEventListener('pointerdown', function once() {
+  document.removeEventListener('pointerdown', once);
+  syncWake();
+  if (cfg.sound) beep(1, 0.01, 0);
+});
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') { wakeLock = null; syncWake(); }
+});
+
+setInterval(function () {
+  if (!st.over) el.clock.textContent = clockText();
+}, 1000);
+
+/* ========== 启动 ========== */
+applyTheme(cfg.theme);
+$('#btnLock').classList.toggle('on', !!st.locked);
+render();
+if (st.over || st.pending) showEnd();
+syncWake();
+
+/* 暴露少量调试入口，便于排查（不影响正常使用） */
+window.__bm = {
+  state: function () { return st; },
+  cfg: function () { return cfg; }
+};
+
+}());
+</script>
+</body>
+</html>
